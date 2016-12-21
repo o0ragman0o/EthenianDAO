@@ -1,8 +1,8 @@
 /******************************************************************************\
 
 file:   Member.sol
-ver:    0.0.1-alpha
-updated:16-Dec-2016
+ver:    0.0.3-alpha
+updated:21-Dec-2016
 author: Darryl Morris (o0ragman0o)
 email:  o0ragman0o AT gmail.com
 
@@ -18,38 +18,31 @@ See MIT Licence for further details.
 
 pragma solidity ^0.4.0;
 
-import "Base.sol";
-import "EthenianDAO.sol";
-import "Matter.sol";
+import "DAOAccount.sol";
 
-
-contract Member is Base
+contract Member is DAOAccount
 {
 
 /* Constants */
 
-    string constant public VERSION = "Member 0.0.1-alpha";
+    string constant public VERSION = "Member 0.0.3-alpha";
     
     // 100 tokens == 100% 
     uint constant MAXTOKENS = 100;
 
 /* Structs */
-
     struct Vote {
         uint votingTokens;
         uint votes;
     }
 
+
 /* State Variable */
 
-    EthenianDAO public dao;
-    uint public lastActiveBalance;
-    uint public lastActiveBlock;
-    uint public fundedCredits;
-    uint public taxCredits;
-    uint public fundedTaxCredits;
-    string public name;
-
+    // TODO redundant store. name in registrar
+    bytes32 public name;
+    DAOAccount public taxAccount;// = new DAOAccount();
+    
     //
     mapping (uint => mapping (uint => Vote)) currentVotes;
 
@@ -70,12 +63,6 @@ contract Member is Base
         _;
     }
     
-    modifier notOwner()
-    {
-        if (msg.sender == owner) throw;
-        _;
-    }
-    
     // Validate tokens for voting or delegation
     modifier validTokens(uint _matterId, uint _votingTokens)
     {
@@ -86,81 +73,62 @@ contract Member is Base
     
     modifier payWithdrawalTax()
     {
-        uint taxOwed = attritionTaxOwed() +
-            dao.withdrawalTaxBlocks() * dao.attritionTaxRate();
-        uint txCredits = taxCredits;
-        uint fndCredits = fundedCredits;
+        // uint taxOwed = attritionTaxOwed() +
+        //     dao.withdrawalTaxBlocks() * dao.attritionTaxRate();
+        // uint txCredits = taxCredits;
+        // uint fndCredits = fundedCredits;
         
-        // Tax against Funding Credits first
-        if (taxOwed > 0) {
-            if (fndCredits < taxOwed) {
-                taxOwed -= fndCredits;
-                fndCredits = 0;
-            }
-        } else {
-                fndCredits -= taxOwed;
-                taxOwed = 0;
-        }
-        // Only tax ether balance if not enough fundingCredit    
-        if (taxOwed > 0) {
-            txCredits += this.balance < taxOwed ? this.balance : taxOwed;
-        }
-        if (txCredits != taxCredits) taxCredits = txCredits;
-        if (fndCredits != fundedCredits) fundedCredits = fndCredits;
+        // // Tax against Funding Credits first
+        // if (taxOwed > 0) {
+        //     if (fndCredits < taxOwed) {
+        //         taxOwed -= fndCredits;
+        //         fndCredits = 0;
+        //     }
+        // } else {
+        //         fndCredits -= taxOwed;
+        //         taxOwed = 0;
+        // }
+        // // Only tax ether balance if not enough fundingCredit    
+        // if (taxOwed > 0) {
+        //     txCredits += this.balance < taxOwed ? this.balance : taxOwed;
+        // }
+        // if (txCredits != taxCredits) taxCredits = txCredits;
+        // if (fndCredits != fundedCredits) fundedCredits = fndCredits;
         _;
     }
     
     modifier payAttritionTax()
     {
-        uint attTax = attritionTaxOwed();
+        // uint attTax = attritionTaxOwed();
         
-        // Tax against Funding Credits first
-        if (attTax > 0) {
-            if (fundedCredits < attTax) {
-                attTax -= fundedCredits;
-                fundedCredits = 0;
-            }
-        } else {
-                fundedCredits -= attTax;
-                attTax = 0;
-        }
-        // Only tax ether balance if not enough fundingCredit    
-        if (attTax > 0) {
-            taxCredits += this.balance < attTax ? this.balance : attTax;
-        }
+        // // Tax against Funding Credits first
+        // if (attTax > 0) {
+        //     if (fundedCredits < attTax) {
+        //         attTax -= fundedCredits;
+        //         fundedCredits = 0;
+        //     }
+        // } else {
+        //         fundedCredits -= attTax;
+        //         attTax = 0;
+        // }
+        // // Only tax ether balance if not enough fundingCredit    
+        // if (attTax > 0) {
+        //     taxCredits += this.balance < attTax ? this.balance : attTax;
+        // }
         _;
     }
     
-    modifier hasEther(uint _amount)
-    {
-        if(_amount > this.balance - taxCredits) throw;
-        _;
-    }
-
     modifier updateVotingBalance()
     {
-       _; 
+      _; 
     }
     // Handles activity updates to tax
-    modifier touch()
-    {
-        // TODO
-        // TODO lastActive = msg.block;
-        // TODO update taxCredits, fundingCredits
-        // TODO Orphan check
-        // touchIntl();
-        lastActiveBlock = block.number;
-        _;
-    }
     
-    function Member(address _dao, string _name, address _externalOwner)
+    function Member(address _dao, bytes32 _name, address _externalOwner)
         public
+        DAOAccount(_dao, _externalOwner)
     {
-        dao = EthenianDAO(_dao);
         name = _name;
-        owner = _externalOwner;
-        lastActiveBlock = block.number;
-        lastActiveBalance = msg.value;
     }
     
     function ()
@@ -183,7 +151,7 @@ contract Member is Base
         constant
         returns (uint wdlTax_)
     {
-        wdlTax_ = dao.withdrawalTaxBlocks() * dao.attritionTaxRate();
+        wdlTax_ = dao.withdrawalTaxRate() * dao.attritionTaxRate();
     }
     
     function attritionTaxOwed()
@@ -201,8 +169,10 @@ contract Member is Base
         returns (uint base_)
     {
         uint maxVB = dao.maximumVoteBalance();
-        base_ = this.balance + fundedCredits + taxCredits;
-        base_ = base_ < maxVB ? base_ : maxVB;
+        uint minVB = dao.minimumVoteBalance();
+        base_ = this.balance + fundedCredits + taxAccount.balance;
+        base_ = base_ > maxVB ? maxVB : base_;
+        base_ = base_ < minVB ? 0 : base_;
     }
     
     // Total votes includes vote that have been delegated to the member
@@ -214,7 +184,7 @@ contract Member is Base
         votes_ = constituents[_matterId][0].votes + baseVotes() * MAXTOKENS;
     }
     
-    function getAwardedFrom(uint _matterId, address _constituent)
+    function getConstituentVotesFrom(uint _matterId, Member _constituent)
         public
         constant
         returns (uint[2])
@@ -222,7 +192,7 @@ contract Member is Base
         return [
             constituents[_matterId][_constituent].votingTokens,
             constituents[_matterId][_constituent].votes
-        ];
+            ];
     }
     
     // To register a preference for an option in a matter
@@ -237,7 +207,7 @@ contract Member is Base
         returns (bool)
     {
         uint votes; 
-        Matter matter = dao.getMatter(_matterId);
+        Matter matter = Matter(dao.getMatter(_matterId));
 
         // Token accouting
         uint deltaTokens = _votingTokens -
@@ -257,7 +227,7 @@ contract Member is Base
     
     // Transfer votes to another member for all (matterId ==0) 
     // or a particular matter
-    function delegateVotes(uint _matterId, uint _votingTokens, Member _delegate)
+    function delegateVotesTo(uint _matterId, uint _votingTokens, Member _delegate)
         public
         onlyOwner
         canEnter  // reentry protection prevents delegate loops
@@ -265,7 +235,7 @@ contract Member is Base
         validTokens(_matterId, _votingTokens)
         returns (bool success_)
     {
-        uint[2] memory oldAward = _delegate.getAwardedFrom(_matterId, this);
+        uint[2] memory oldAward = _delegate.getConstituentVotesFrom(_matterId, this);
         uint transferVotes = 
             (_votingTokens * totalVotes(_matterId)/MAXTOKENS) - oldAward[1];
         _votingTokens = _votingTokens - oldAward[0];
@@ -274,12 +244,13 @@ contract Member is Base
         constituents[_matterId][0].votes -= transferVotes;
 
         // Give to delegate
-        _delegate.delegate(_matterId, _votingTokens, transferVotes);
+        _delegate.recieveConstituentVotes(_matterId, _votingTokens, transferVotes);
         success_ =  SUCCESS;
+        return;
     }
     
     // Recieve voting power from another member for all or a particular matter
-    function delegate(uint _matterId, uint _votingTokens, uint _votes)
+    function recieveConstituentVotes(uint _matterId, uint _votingTokens, uint _votes)
         public
         onlyVoters
         canEnter
@@ -292,36 +263,24 @@ contract Member is Base
         return SUCCESS;
     }
     
-    function raiseMatter(string _name)
+    function raiseMatter(bytes32 _name, string _url)
         external
         onlyOwner
         canEnter
-        returns (Matter)
+        returns (address matter_)
     {
-        return dao.newMatter(_name);
+        matter_ = dao.newMatter(_name, _url);
+        return;
     }
     
-    function addOption(uint _matterId, uint _value, address _recipient,
-        string _description)
+    function addOption(uint _matterId, bytes32 _name, uint _value,
+        address _recipient)
         external
         onlyOwner
         canEnter
         returns (uint)
     {
-        return dao.getMatter(_matterId).addOption(_value, _recipient,
-            _description);
-    }
-    
-    function fundMatter(uint _matterId, uint _amount)
-        external
-        onlyOwner
-        canEnter
-        touch
-        returns (bool)
-    {
-        fundedCredits += _amount;
-        Matter matter = Matter(dao.mattersRegistrar().get(_matterId));
-        if(!matter.fund(_amount)) throw;
+        return Matter(dao.getMatter(_matterId)).addOption(_name, _value, _recipient);
     }
     
     function withdraw(uint _amount)
@@ -346,33 +305,18 @@ contract Member is Base
 //     {
 //         Matter matter = Matter(dao.mattersRegistrar().get(_matterId));
 //     }
-    
-//     function touchIntl() {
-//         uint blockDelta = block.number - lastActiveBlock;
-//         uint attrTaxCredits = blockDelta * dao.attritionTaxRate();
-//         if (fundedCredits > 0) {
-//             if (fundedCredits > attrTaxCredits) {
-//                 fundedCredits -= attrTaxCredits;
-//             } else {
-//                 attrTaxCredits -= fundedCredits;
-//                 fundedCredits = 0;
-//             }
-//         }
-// //        if ()
-        
-//     }
-}
 
+}
 
 
 contract MemberFactory
 {
-    function createNew(address _dao, string _name, address _owner)
+    function createNew(address _dao, bytes32 _name, address _owner)
         public
-        returns (Member)
+        returns (Member member_)
     {
-        Member member = new Member(_dao, _name, _owner);
-        return member;
+        member_ = new Member(_dao, _name, _owner);
+        return member_;
     }
 }
 

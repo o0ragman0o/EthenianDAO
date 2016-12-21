@@ -1,8 +1,8 @@
 /******************************************************************************\
 
 file:   Matter.sol
-ver:    0.0.1-alpha
-updated:16-Dec-2016
+ver:    0.0.3-alpha
+updated:21-Dec-2016
 author: Darryl Morris (o0ragman0o)
 email:  o0ragman0o AT gmail.com
 
@@ -17,13 +17,13 @@ See MIT Licence for further details.
 \******************************************************************************/
 
 import "Base.sol";
-// import "Maths.sol";
 
 pragma solidity ^0.4.0;
 
+
 contract Matter is Base
 {
-    string constant public VERSION = "Matter 0.0.1-alpha";
+    string constant public VERSION = "Matter 0.0.3-alpha";
     bool constant CLOSED = false;
     bool constant OPEN = true;
     
@@ -32,8 +32,8 @@ contract Matter is Base
         bool open;
         uint value;
         uint votes;
+        bytes32 name;
         address recipient;
-        string description;
     }
     
     bool public open;
@@ -47,7 +47,7 @@ contract Matter is Base
     uint public openTimeStamp;
     uint public period;
     uint public periods;
-    string public description;
+    bytes32 public name;
     mapping (uint => Option) public options;
     // voter -> optionId -> votes
     mapping (address => mapping (uint => uint)) public voters;
@@ -130,11 +130,12 @@ contract Matter is Base
 
 /* External and Public functions */
 
-    function Matter(address _dao, uint _matterId, string _description)
+    function Matter(address _dao, uint _matterId, bytes32 _name, string _url)
     {
         owner = _dao;
         matterId = _matterId;
-        description = _description;
+        name = _name;
+        resourceURL = _url;
         open = OPEN;
     }
     
@@ -155,16 +156,16 @@ contract Matter is Base
         return SUCCESS;
     }
     
-    function addOption(uint _value, address _recipient, string _description)
+    function addOption(bytes32 _name, uint _value, address _recipient)
         external
         onlyTenders
         canEnter
         returns (uint)
     {
         numOptions++;
-        options[numOptions].description = _description;
+        options[numOptions].name = _name;
         options[numOptions].value = _value;
-        options[numOptions].votes = 1; // For existential tests
+        options[numOptions].votes = 1; // Prevents div0 on averaging
         options[numOptions].recipient = _recipient;
         options[numOptions].open = true;
         votesCast++;
@@ -182,16 +183,15 @@ contract Matter is Base
 }
 
 
-
 contract MatterFactory
 {
     string constant public VERSION = "MatterFactory 0.0.1-alpha";
     
-    function createNew(address _dao, uint _matterId, string _description)
+    function createNew(address _dao, uint _matterId, bytes32 _name, string _url)
         public
         returns (Matter)
     {
-        return new Matter(_dao, _matterId, _description);
+        return new Matter(_dao, _matterId, _name, _url);
     }
 }
 

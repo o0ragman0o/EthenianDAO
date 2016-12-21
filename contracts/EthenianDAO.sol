@@ -1,8 +1,8 @@
 /******************************************************************************\
 
 file:   EthenianDAO.sol
-ver:    0.0.1-alpha
-updated:16-Dec-2016
+ver:    0.0.3-alpha
+updated:19-Dec-2016
 author: Darryl Morris (o0ragman0o)
 email:  o0ragman0o AT gmail.com
 
@@ -16,12 +16,11 @@ See MIT Licence for further details.
 
 \******************************************************************************/
 
-import "Base.sol";
-import "Authority.sol";
-import "Member.sol";
+import "Interfaces.sol";
 import "Matter.sol";
-import "MembersRegistrar.sol";
-import "MattersRegistrar.sol";
+import "Member.sol";
+import "Authority.sol";
+import "AddressRegistrar.sol";
 
 
 pragma solidity ^0.4.0;
@@ -29,18 +28,9 @@ pragma solidity ^0.4.0;
 
 contract EthenianDAO is Base
 {
-    string constant public VERSION = "EthenianDAO 0.0.1-alpha";
-    mapping (string => address) contracts;
-
-    // To get core and custom contract addresses
-    function getContract(string _name)
-        public
-        constant
-        returns (address)
-    {
-        return contracts[_name];
-    }
-
+    string constant public VERSION = "EthenianDAO 0.0.3-alpha";
+    AddressRegistrar public contracts = new AddressRegistrar();
+    
 /* EthenianDAO Standard public functions */
 
     // Returns the attritian tax rate per block
@@ -49,17 +39,19 @@ contract EthenianDAO is Base
         constant
         returns (uint aTR_)
     {
-        aTR_ = contracts["attritionTaxRate"] == 0x0 ?
-            0 : Matter(contracts["attritionTaxRate"]).average();
+        address matReg = contracts.namedAddress("attritionTaxRate");
+        aTR_ = matReg == 0x0 ?
+            0 : MatterInterface(matReg).average();
     }
     
-    function withdrawalTaxBlocks()
+    function withdrawalTaxRate()
         public
         constant
         returns (uint wTR_)
     {
-        wTR_ = contracts["withdrawalTaxRate"] == 0x0 ?
-            0: Matter(contracts["withdrawalTaxRate"]).average();
+        address matReg = contracts.namedAddress("withdrawlTaxRate");
+        wTR_ = matReg == 0x0 ?
+            0 : MatterInterface(matReg).average();
     }
     
     function minimumVoteBalance()
@@ -67,8 +59,9 @@ contract EthenianDAO is Base
         constant
         returns (uint minVB_)
     {
-        minVB_ = contracts["minimumVoteBalance"]  == 0x0 ?
-            0 : Matter(contracts["minimumVoteBalance"]).average();
+        address matReg = contracts.namedAddress("minimumVoteBalance");
+        minVB_ = matReg == 0x0 ?
+            0 : MatterInterface(matReg).average();
     }
     
     function maximumVoteBalance()
@@ -76,69 +69,79 @@ contract EthenianDAO is Base
         constant
         returns (uint maxVB_)
     {
-        maxVB_ = contracts["maximumVoteBalance"] == 0x0 ?
-            2**128 : Matter(contracts["maximumVoteBalance"]).average();
-    }
-    
-    function membersRegistrar()
-        public
-        constant
-        returns (MembersRegistrar)
-    {
-        return MembersRegistrar(contracts["membersRegistrar"]);
-    }
-
-    function mattersRegistrar()
-        public
-        constant
-        returns (MattersRegistrar)
-    {
-        return MattersRegistrar(contracts["mattersRegistrar"]);
+        address matReg = contracts.namedAddress("maximumVoteBalance");
+        maxVB_ = matReg == 0x0 ?
+            0 : MatterInterface(matReg).average();
     }
     
     function getMatter(uint _matterId)
         public
         constant
-        returns (Matter)
+        returns (address matter_)
     {
-        return mattersRegistrar().get(_matterId);
+        matter_ = Matter(contracts.idAddress(_matterId));
     }
     
     function authority()
         public
         constant
-        returns (Authority)
+        returns (address auth_)
     {
-        return Authority(contracts["authority"]);
+        auth_ = Authority(contracts.namedAddress("authority"));
     }
-
+    
 
 /* Public Function */ 
 
     // To set core and custom contract addresses.
-    function setContract(string _name, address _addr)
+    function setContract(bytes32 _name, address _addr)
         public
         onlyOwner
         canEnter
         returns (bool)
     {
-        contracts[_name] = _addr;
-        return true;
+        contracts.add(_name, _addr, false);
+        return SUCCESS;
     }
     
-    function newMember(string _name)
+    function getByName(bytes32 _name)
         public
-        returns (Member member_)
+        constant
+        returns (address addr_)
     {
-        member_ = membersRegistrar().newMember(_name, msg.sender);
+        addr_ = contracts.namedAddress(_name);
         return;
     }
 
-    function newMatter(string _description)
+    function getById(uint _id)
         public
-        returns (Matter matter_)
+        constant
+        returns (address addr_)
     {
-        matter_ = mattersRegistrar().newMatter(_description);
+        addr_ = contracts.idAddress(_id);
+        return;
+    }
+    
+    function newMember(bytes32 _name)
+        public
+        returns (address member_)
+    {
+        address memFactory = contracts.namedAddress("memberFactory");
+
+        member_ = MemberFactory(memFactory).createNew(this, _name, msg.sender);
+        contracts.add(_name, member_, false);
+        return;
+    }
+
+    function newMatter(bytes32 _name, string _url)
+        public
+        returns (address matter_)
+    {
+        address matFactory = contracts.namedAddress("matterFactory");
+
+        matter_ = MatterFactory(matFactory).
+            createNew(this, contracts.size(), _name, _url);
+        contracts.add(_name, matter_, false);
         return;
     }
 }

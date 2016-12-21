@@ -1,8 +1,8 @@
 /******************************************************************************\
 
 file:   Base.sol
-ver:    0.2.4
-updated:15-Dec-2016
+ver:    0.2.5
+updated:19-Dec-2016
 author: Darryl Morris (o0ragman0o)
 email:  o0ragman0o AT gmail.com
 
@@ -31,6 +31,7 @@ contract Base
 
     bool mutex;
     address public owner;
+    string public resourceURL;
 
 /* Events */
 
@@ -92,16 +93,23 @@ contract Base
     {
         owner = _newOwner;
         ChangedOwner(msg.sender, owner);
-        return true;
+        return SUCCESS;
+    }
+    
+    function setResourceURL(string _res)
+        public onlyOwner returns (bool)
+    {
+        resourceURL = _res;
+        return SUCCESS;
     }
     
     function safeSend(address _recipient, uint _ether)
         internal
         preventReentry()
-        returns (bool success_)
+        returns (bool)
     {
         if(!_recipient.call.value(_ether)()) throw;
-        success_ = true;
+        return SUCCESS;
     }
 }
 
