@@ -2,7 +2,7 @@
 
 file:   Member.sol
 ver:    0.0.3-alpha
-updated:21-Dec-2016
+updated:23-Dec-2016
 author: Darryl Morris (o0ragman0o)
 email:  o0ragman0o AT gmail.com
 
@@ -29,6 +29,7 @@ contract Member is DAOAccount
     
     // 100 tokens == 100% 
     uint constant MAXTOKENS = 100;
+    uint constant FIXEDPOINT = 10**5;
 
 /* Structs */
     struct Vote {
@@ -40,19 +41,19 @@ contract Member is DAOAccount
 /* State Variable */
 
     // TODO redundant store. name in registrar
-    bytes32 public name;
+    bytes32 memberName;
     DAOAccount public taxAccount;// = new DAOAccount();
     
     //
-    mapping (uint => mapping (uint => Vote)) currentVotes;
+    mapping (bytes32 => mapping (uint => Vote)) currentVotes;
 
     // Delegates are members this member has awarded voting power to
     // matterId -> delegate -> awarded voting power;
-    mapping (uint => address[]) public delegates;
+    mapping (bytes32 => address[]) public delegates;
 
     // Constituents are members who have awarded this member their voting power
     // matterId -> constituent -> awarded voting power
-    mapping (uint => mapping (address => Vote)) public constituents;
+    mapping (bytes32 => mapping (address => Vote)) public constituents;
     
     
 /* Modifiers */
@@ -64,10 +65,10 @@ contract Member is DAOAccount
     }
     
     // Validate tokens for voting or delegation
-    modifier validTokens(uint _matterId, uint _votingTokens)
+    modifier validTokens(bytes32 _matterName, uint _votingTokens)
     {
         if (MAXTOKENS <
-            constituents[_matterId][this].votingTokens + _votingTokens) throw;
+            constituents[_matterName][this].votingTokens + _votingTokens) throw;
         _;
     }
     
@@ -128,7 +129,7 @@ contract Member is DAOAccount
         public
         DAOAccount(_dao, _externalOwner)
     {
-        name = _name;
+        memberName = _name;
     }
     
     function ()
@@ -138,6 +139,22 @@ contract Member is DAOAccount
         lastActiveBalance = this.balance;
     }
     
+    function name()
+        public
+        constant
+        returns (string)
+    {
+        uint name = uint(memberName);
+        bytes memory bytesString = new bytes(32);
+        for (uint j=0; j<32; j++) {
+            byte char = byte(bytes32(name * 2 ** (8 * j)));
+            if (char != 0) {
+                bytesString[j] = char;
+            }
+        }
+        return string(bytesString);
+    }
+
     function withdrawableBalance()
         public
         constant
@@ -176,50 +193,53 @@ contract Member is DAOAccount
     }
     
     // Total votes includes vote that have been delegated to the member
-    function totalVotes(uint _matterId)
+    function totalVotes(bytes32 _matterName)
         public
         constant
         returns (uint votes_)
     {
-        votes_ = constituents[_matterId][0].votes + baseVotes() * MAXTOKENS;
+        uint bv = baseVotes();
+        uint maxVB = dao.maximumVoteBalance();
+        votes_ = ((constituents[_matterName][0].votes + bv) * (bv * FIXEDPOINT)/
+            maxVB) / FIXEDPOINT;
     }
     
-    function getConstituentVotesFrom(uint _matterId, Member _constituent)
+    function getConstituentVotesFrom(bytes32 _matterName, Member _constituent)
         public
         constant
         returns (uint[2])
     {
         return [
-            constituents[_matterId][_constituent].votingTokens,
-            constituents[_matterId][_constituent].votes
+            constituents[_matterName][_constituent].votingTokens,
+            constituents[_matterName][_constituent].votes
             ];
     }
     
     // To register a preference for an option in a matter
-    function vote(uint _matterId, uint _optionId, uint _votingTokens)
+    function vote(bytes32 _matterName, uint _optionId, uint _votingTokens)
         external
         onlyOwner
         canEnter
         payAttritionTax
         updateVotingBalance
-        validTokens(_matterId, _votingTokens)
+        validTokens(_matterName, _votingTokens)
         touch
         returns (bool)
     {
         uint votes; 
-        Matter matter = Matter(dao.getMatter(_matterId));
+        Matter matter = Matter(dao.getMatter(_matterName));
 
         // Token accouting
         uint deltaTokens = _votingTokens -
-            currentVotes[_matterId][_optionId].votingTokens;
+            currentVotes[_matterName][_optionId].votingTokens;
             
-        currentVotes[_matterId][_optionId].votingTokens = _votingTokens;
+        currentVotes[_matterName][_optionId].votingTokens = _votingTokens;
         
         // Adjust tokens left available for voting
-        constituents[_matterId][this].votingTokens += deltaTokens;
+        constituents[_matterName][this].votingTokens += deltaTokens;
         
         // Votes accounting
-        votes = _votingTokens * totalVotes(_matterId)/MAXTOKENS;
+        votes = _votingTokens * totalVotes(_matterName)/MAXTOKENS;
         
         matter.vote(_optionId, votes);
         return SUCCESS;
@@ -227,39 +247,44 @@ contract Member is DAOAccount
     
     // Transfer votes to another member for all (matterId ==0) 
     // or a particular matter
-    function delegateVotesTo(uint _matterId, uint _votingTokens, Member _delegate)
+    function delegateVotesTo(bytes32 _matterName, bytes32 _delegateName,
+            uint _votingTokens)
         public
         onlyOwner
         canEnter  // reentry protection prevents delegate loops
         touch
-        validTokens(_matterId, _votingTokens)
+        validTokens(_matterName, _votingTokens)
         returns (bool success_)
     {
-        uint[2] memory oldAward = _delegate.getConstituentVotesFrom(_matterId, this);
+        Member delegate = Member(dao.getMember(_delegateName));
+        uint[2] memory oldAward = delegate.
+            getConstituentVotesFrom(_matterName, this);
         uint transferVotes = 
-            (_votingTokens * totalVotes(_matterId)/MAXTOKENS) - oldAward[1];
+            (_votingTokens * totalVotes(_matterName)/MAXTOKENS) - oldAward[1];
         _votingTokens = _votingTokens - oldAward[0];
             
         // Take from current voting balance.
-        constituents[_matterId][0].votes -= transferVotes;
+        constituents[_matterName][0].votes -= transferVotes;
 
         // Give to delegate
-        _delegate.recieveConstituentVotes(_matterId, _votingTokens, transferVotes);
+        delegate.recieveConstituentVotes(_matterName, _votingTokens,
+            transferVotes);
         success_ =  SUCCESS;
         return;
     }
     
     // Recieve voting power from another member for all or a particular matter
-    function recieveConstituentVotes(uint _matterId, uint _votingTokens, uint _votes)
+    function recieveConstituentVotes(bytes32 _matterName, uint _votingTokens,
+            uint _votes)
         public
         onlyVoters
         canEnter
         returns (bool)
     {
-        constituents[_matterId][0].votes += _votes;
+        constituents[_matterName][0].votes += _votes;
         // Record votes and voting tokens of the constituent 
-        constituents[_matterId][msg.sender].votingTokens += _votingTokens;
-        constituents[_matterId][msg.sender].votes += _votes;
+        constituents[_matterName][msg.sender].votingTokens += _votingTokens;
+        constituents[_matterName][msg.sender].votes += _votes;
         return SUCCESS;
     }
     
@@ -273,14 +298,15 @@ contract Member is DAOAccount
         return;
     }
     
-    function addOption(uint _matterId, bytes32 _name, uint _value,
+    function addOption(bytes32 _matterName, bytes32 _optionName, uint _value,
         address _recipient)
         external
         onlyOwner
         canEnter
         returns (uint)
     {
-        return Matter(dao.getMatter(_matterId)).addOption(_name, _value, _recipient);
+        return Matter(dao.getMatter(_matterName)).
+            addOption(_optionName, _value, _recipient);
     }
     
     function withdraw(uint _amount)
@@ -311,12 +337,14 @@ contract Member is DAOAccount
 
 contract MemberFactory
 {
-    function createNew(address _dao, bytes32 _name, address _owner)
+    string constant public VERSION = "MemberFactory 0.0.3-alpha";
+    
+    function createNew(bytes32 _name, address _owner)
         public
         returns (Member member_)
     {
-        member_ = new Member(_dao, _name, _owner);
-        return member_;
+        member_ = new Member(msg.sender, _name, _owner);
+        return;
     }
 }
 

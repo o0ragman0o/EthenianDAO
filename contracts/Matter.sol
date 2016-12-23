@@ -2,7 +2,7 @@
 
 file:   Matter.sol
 ver:    0.0.3-alpha
-updated:21-Dec-2016
+updated:23-Dec-2016
 author: Darryl Morris (o0ragman0o)
 email:  o0ragman0o AT gmail.com
 
@@ -130,10 +130,8 @@ contract Matter is Base
 
 /* External and Public functions */
 
-    function Matter(address _dao, uint _matterId, bytes32 _name, string _url)
+    function Matter(bytes32 _name, string _url)
     {
-        owner = _dao;
-        matterId = _matterId;
         name = _name;
         resourceURL = _url;
         open = OPEN;
@@ -187,12 +185,12 @@ contract MatterFactory
 {
     string constant public VERSION = "MatterFactory 0.0.1-alpha";
     
-    function createNew(address _dao, uint _matterId, bytes32 _name, string _url)
+    function createNew(bytes32 _name, string _url)
         public
-        returns (Matter)
+        returns (Matter matter_)
     {
-        return new Matter(_dao, _matterId, _name, _url);
+        matter_ = new Matter(_name, _url);
+        matter_.changeOwner(msg.sender);
+        return;
     }
 }
-
-
