@@ -1,8 +1,8 @@
 /******************************************************************************\
 
 file:   AddressesRegistrar.sol
-ver:    0.0.3-alpha
-updated:21-Dec-2016
+ver:    0.0.5-sandalstraps
+updated:6-Jan-2017
 author: Darryl Morris (o0ragman0o)
 email:  o0ragman0o AT gmail.com
 
@@ -28,6 +28,7 @@ contract AddressRegistrar is Base
     // name -> address -> id -> name
     mapping (bytes32 => address) public namedAddress;
     mapping (address => uint) public addressId;
+    // TODO Redundant store. maybe refer to name in contract
     mapping (uint => bytes32) public idName;
 
     modifier canUpdate(bytes32 _name, bool _overwrite)
@@ -35,28 +36,33 @@ contract AddressRegistrar is Base
         if (!_overwrite && namedAddress[_name] != 0x0) throw;
         _;
     }
+    
+    event Entered(bytes32 name, address addr);
 
+    function AddressRegistrar(address _owner)
+        public
+    {
+        owner = _owner;
+    }
+    
     function add(bytes32 _name, address _addr, bool _overwrite)
         public
         onlyOwner
-        returns (uint id_)
+        canUpdate(_name, _overwrite)
     {
-        size++;
         namedAddress[_name] = _addr;
         addressId[_addr] = size;
         idName[size] = _name;    
-        id_ = size;
+        size++;
     }
     
     function remove(bytes32 _name)
         public
         onlyOwner
-        returns (bool)
     {
         delete idName[addressId[namedAddress[_name]]];
         delete addressId[namedAddress[_name]];
         delete namedAddress[_name];
-        return SUCCESS;
     }
     
     function idAddress(uint _id)
@@ -67,20 +73,19 @@ contract AddressRegistrar is Base
         addr_ = namedAddress[idName[_id]];
         return;
     }
+}
 
-    function getName(address _addr)
+contract AddressRegistrarFactory
+{
+    string constant public VERSION = "AddressRegistrarFactory v0.0.4-alpha";
+    AddressRegistrar public last;
+
+    event Created(address _addr);
+    
+    function createNew()
         public
-        constant
-        returns (string)
     {
-        uint name = uint(idName[addressId[_addr]]);
-        bytes memory bytesString = new bytes(32);
-        for (uint j=0; j<32; j++) {
-            byte char = byte(bytes32(name * 2 ** (8 * j)));
-            if (char != 0) {
-                bytesString[j] = char;
-            }
-        }
-        return string(bytesString);
+        last = new AddressRegistrar(msg.sender);
+        Created(last);
     }
 }

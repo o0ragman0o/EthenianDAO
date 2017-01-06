@@ -1,0 +1,21 @@
+<template name ="Delegates">
+	<h3>Current Delegates for <i>{{matterName}}</i></h3>
+	{{#with delegates}}
+  	{{#if currentMember}}
+		{{votingTokens}}% awarded <br>
+	{{/if}}
+	<form>
+	<ul>
+	{{#each delegates}}
+		<li>
+	  	<h3>{{name}}</h3>
+		{{> dapp_addressInput value=address class="dapp-small" disabled="true"}}
+		<input type="range" id="{{address}}" value="{{tokens}}" />
+		</li>
+	{{/each}}
+	</ul>
+		<input type="submit" value="Delegate Votes" />
+	</form>
+	{{/with}}
+	<input id="addDelegate" type="button" value="Add Delegate" />
+</template>

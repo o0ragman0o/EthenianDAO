@@ -1,8 +1,8 @@
 /******************************************************************************\
 
 file:   Matter.sol
-ver:    0.0.3-alpha
-updated:23-Dec-2016
+ver:    0.0.5-sandalstraps
+updated:6-Jan-2017
 author: Darryl Morris (o0ragman0o)
 email:  o0ragman0o AT gmail.com
 
@@ -23,7 +23,7 @@ pragma solidity ^0.4.0;
 
 contract Matter is Base
 {
-    string constant public VERSION = "Matter 0.0.3-alpha";
+    string constant public VERSION = "Matter 0.0.4-alpha";
     bool constant CLOSED = false;
     bool constant OPEN = true;
     
@@ -38,16 +38,17 @@ contract Matter is Base
     
     bool public open;
     bool public recurrent;
-//    bool public tendering;
-//    bool public funding;
-//    bool public refunding;
-    uint public matterId;
+    bool public scalar;
+    bool public tendering;
+    bool public funding;
+    bool public refunding;
+    address public dao;
+    bytes32 public name;
     uint public numOptions;
     uint public votesCast;
     uint public openTimeStamp;
     uint public period;
     uint public periods;
-    bytes32 public name;
     mapping (uint => Option) public options;
     // voter -> optionId -> votes
     mapping (address => mapping (uint => uint)) public voters;
@@ -78,15 +79,15 @@ contract Matter is Base
     
     modifier votingOpen()
     {
-        if (block.timestamp > openTimeStamp + period) {
-            if (recurrent) {
-                openTimeStamp = block.timestamp;
-                periods++;
-            } else {
-                open = CLOSED;
-            }
-        }
-        if (!open) throw;
+        // if (block.timestamp > openTimeStamp + period) {
+        //     if (recurrent) {
+        //         openTimeStamp = block.timestamp;
+        //         periods++;
+        //     } else {
+        //         open = CLOSED;
+        //     }
+        // }
+        // if (!open) throw;
         _;
     }
 
@@ -95,27 +96,28 @@ contract Matter is Base
     function value()
         public
         constant
-        returns (uint)
+        returns (uint value_)
     {
-        return options[leader()].value;
+        value_ = scalar ? average() : options[leader()].value;
     }
     
     function average()
         public
         constant
-        returns (uint)
+        returns (uint average_)
     {
+        if (votesCast == 0) return 0;
         uint total;
         for(uint i = 0; i <= numOptions; i++) {
             total += options[i].value * options[i].votes;
         }
-        return total / votesCast;
+        average_ = total / votesCast;
     }
     
     function leader()
         public
         constant
-        returns (uint)
+        returns (uint leader_)
     {
         uint curLeader = 0;
         for(uint i = 1; i <= numOptions; i++) {
@@ -123,18 +125,20 @@ contract Matter is Base
             curLeader = options[curLeader].votes < options[i].votes ?
                 i : curLeader;
         } 
-        
-        return curLeader;
+       leader_ = curLeader;
     }
         
 
 /* External and Public functions */
 
-    function Matter(bytes32 _name, string _url)
+    function Matter(address _dao, bytes32 _name, string _url)//, bool _scalar)
     {
+        dao = _dao;
         name = _name;
         resourceURL = _url;
         open = OPEN;
+        votesCast = 1;
+        // scalar = _scalar;
     }
     
     function touch() {
@@ -145,52 +149,48 @@ contract Matter is Base
         external
         onlyVoters
         canEnter
-//        votingOpen
+        votingOpen
         optionOpen(_optionId)
-        returns (bool)
     {
         options[_optionId].votes += _votes;
         votesCast += _votes;
-        return SUCCESS;
     }
     
     function addOption(bytes32 _name, uint _value, address _recipient)
         external
         onlyTenders
         canEnter
-        returns (uint)
     {
-        numOptions++;
         options[numOptions].name = _name;
         options[numOptions].value = _value;
-        options[numOptions].votes = 1; // Prevents div0 on averaging
+        // options[numOptions].votes = 1; // Prevents div0 on averaging
         options[numOptions].recipient = _recipient;
         options[numOptions].open = true;
-        votesCast++;
-        return numOptions;
+        // votesCast++;
+        numOptions++;
     }
     
     function fund(uint _amount)
         payable
         isFunding
         canEnter
-        returns (bool)
     {
-        return SUCCESS;
     }
 }
 
 
 contract MatterFactory
 {
-    string constant public VERSION = "MatterFactory 0.0.1-alpha";
-    
-    function createNew(bytes32 _name, string _url)
+    string constant public VERSION = "MatterFactory 0.0.4-alpha";
+    Matter public last;
+    event Created(bytes32 _name, address _addr);
+
+    function createNew(bytes32 _name, string _url)//, bool _scalar)
         public
-        returns (Matter matter_)
     {
-        matter_ = new Matter(_name, _url);
-        matter_.changeOwner(msg.sender);
-        return;
+        last = new Matter(msg.sender, _name, _url);//, _scalar);
+        Created(_name, last);
     }
 }
+
+

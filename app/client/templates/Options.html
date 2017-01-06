@@ -1,0 +1,42 @@
+<Template name="Options">
+	{{#with matterOptions}}
+	<form>
+	<h3>{{matterName}}</h3>
+  	{{#if currentMember}}
+		{{votingTokens}}% awarded <br>
+		{{totalVotes}} Total voting power<br>
+		{{votes}} Votes placed.
+	{{/if}}
+		<ul>
+		{{#each options}}
+			<li>
+				{{name}} {{votes}} votes<br>
+
+				<a href="{{resourceURL}}">{{resourceURL}}</a>
+				<!-- Recipient:{{recipient}}<br> -->
+				Value:{{value}}<br>
+		  	{{#if currentMember}}
+				<input type="range" id="{{index}}" value="{{ownTokens}}" />
+			{{/if}}
+			</li>
+		{{/each}}
+		</ul>
+		<ul>
+		{{#each delegates}}
+			<li>
+		  	<h3>{{name}}</h3>
+			{{> dapp_addressInput value=address class="dapp-small" disabled="true"}}
+			<input type="range" id="{{index}}" value="{{tokens}}" />
+			</li>
+		{{/each}}
+		</ul>
+		{{#if showSubmit}}
+				<input type="submit" value="Submit Votes" />
+		{{/if}}
+	</form>
+	{{#if member}}
+		<input id="addOption" type="button" value="Add Option" /><br>
+		<input id="addDelegate" type="button" value="Add Delegate" />
+	{{/if}}
+	{{/with}}
+</Template>

@@ -1,0 +1,39 @@
+<template name="EthenianDAO">
+  {{#with currentDAO}}
+  <h3>{{name}}</h3>
+    <ul class="trader-account-list">
+    	<li>
+     <button class="modal">
+        <!-- <h3>{{name}}</h3> -->
+        {{> dapp_identicon identity=address class="dapp-medium"}}
+        <h3>{{VERSION}}</h3>
+        <h3>{{address}}</h3>
+        <h3>Maximum Vote Balance: {{maximumVoteBalance}}</h3>
+        <h3>Attrition Tax Rate: {{attritionTaxRate}}</h3>
+     </button>
+     </li>
+    </ul>
+    {{/with}}
+    {{#if admin}}
+    <input class="newReg" type="button" value="Create New Registrar"><br>
+    <input class="addFactory" type="button" value="Add New Factory">
+    {{/if}}
+</template>
+
+<template name="NewRegistrar">
+  <h3> Enter name of new Registrar</h3>
+  <form>
+  <input type="text" id="regName" />
+  <input type="submit"/>
+  </form>
+</template>
+
+<template name="AddFactory">
+  <h3> Enter Name and Address of new Factory</h3>
+  <form>
+  <input type="text" id="factoryName" />
+  {{> dapp_addressInput value=address class="dapp-mediaum" placeholder="0x1234..."}}
+  <input type="submit"/>
+  </form>
+</template>
+

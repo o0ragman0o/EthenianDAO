@@ -1,0 +1,47 @@
+<head>
+  <title>EthenianDAO</title>
+</head>
+
+<body class="" onload="EthElements.Modal.question({template:'notice', closeable:false, ok:true})">
+<header class="dapp-header">
+<img src="logo.png" class="logo" />
+<h2>EthenianDAO</h2>
+<h3>Delegative Democracy Governance Framework</h3>
+<div class="right">
+    {{> EthereumAccount }}
+</div>
+</header>
+
+<div class="dapp-flex-content">
+    
+    <!-- aside -->
+    <aside class="dapp-aside">
+    <!-- {{> menuNav}} -->
+    </aside>
+    <!-- content-->
+    <main class="dapp-content">
+    <div  class="ittd-container">
+        <div class="ittd-panel col-6">
+            {{> EthenianDAO }}
+            {{> Member }}
+        </div>
+        <div class="ittd-panel col-6">
+            {{> Matter }}
+        </div>
+    </div>
+
+   </main>
+
+    <!-- actionbar -->
+    <aside>
+    </aside>
+</div>
+
+<!-- footer -->
+<footer class="dapp-footer">
+    <!-- {{> blocks}} -->
+</footer>
+
+    {{> dapp_modalPlaceholder}}
+</body>
+

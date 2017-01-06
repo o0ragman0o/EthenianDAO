@@ -1,0 +1,32 @@
+<Template name="Matter">
+	<h3>Matters</h3>
+	{{#if currentMember}}
+    <input id="newMatter" type="button" class="dapp-input" value="Raise a new matter"/>
+    {{/if}}
+	<input id="findMatter" class="dapp-input" type="button" value="Find Matter"/>
+	{{#if name}}
+        <h4>{{name}}</h4>
+		  {{#with currentMatter}}
+		        {{> dapp_addressInput value=address class="dapp-small" disabled="true"}}<br>
+				<a href="{{resourceURL}}">{{resourceURL}}</a><br>
+		        Version: {{VERSION}}<br>
+		        Votes Cast: {{votesCast}}<br>
+		        Average: {{average}}<br>
+		  {{/with}}
+		  {{#if currentMember}}
+		  <input id="openVoting" class="dapp-input" type="button" value="Vote"/>
+		  {{else}}
+		  <input id="openVoting" class="dapp-input" type="button" value="See Options"/>
+		  {{/if}}
+
+	{{/if}}
+</Template>
+
+<Template name="NewMatter">
+  <h3>Raise New Matter</h3>
+  <form>
+  <input type="text" id="matterName" placeholder="name" />
+  <input type="text" id="resourceURL" placeholder="URL" />
+  <input type="submit"/>
+  </form>
+</Template>

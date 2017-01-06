@@ -1,8 +1,8 @@
 /******************************************************************************\
 
 file:   Base.sol
-ver:    0.2.5
-updated:19-Dec-2016
+ver:    0.0.5-sandalstraps
+updated:6-Jan-2017
 author: Darryl Morris (o0ragman0o)
 email:  o0ragman0o AT gmail.com
 
@@ -24,8 +24,7 @@ contract Base
 {
 /* Constants */
 
-    string constant public VERSION = "Base 0.2.4";
-    bool constant SUCCESS = true;
+    string constant public VERSION = "Base 0.2.5";
 
 /* State Variables */
 
@@ -89,27 +88,23 @@ contract Base
 
     // Change the owner of a contract
     function changeOwner(address _newOwner)
-        public onlyOwner returns (bool)
+        public onlyOwner
     {
         owner = _newOwner;
         ChangedOwner(msg.sender, owner);
-        return SUCCESS;
     }
     
     function setResourceURL(string _res)
-        public onlyOwner returns (bool)
+        public onlyOwner
     {
         resourceURL = _res;
-        return SUCCESS;
     }
     
     function safeSend(address _recipient, uint _ether)
         internal
         preventReentry()
-        returns (bool)
     {
         if(!_recipient.call.value(_ether)()) throw;
-        return SUCCESS;
     }
 }
 

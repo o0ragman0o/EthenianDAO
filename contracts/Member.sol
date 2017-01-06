@@ -1,8 +1,8 @@
 /******************************************************************************\
 
 file:   Member.sol
-ver:    0.0.3-alpha
-updated:23-Dec-2016
+ver:    0.0.5-sandalstraps
+updated:6-Jan-2017
 author: Darryl Morris (o0ragman0o)
 email:  o0ragman0o AT gmail.com
 
@@ -25,11 +25,16 @@ contract Member is DAOAccount
 
 /* Constants */
 
-    string constant public VERSION = "Member 0.0.3-alpha";
+    string constant public VERSION = "Member 0.0.4-alpha";
     
     // 100 tokens == 100% 
     uint constant MAXTOKENS = 100;
+    // Using fixed point decimal maths for divisions
+    // TODO optomise fixed point
     uint constant FIXEDPOINT = 10**5;
+    
+    // Maximum depth of Delegation tree
+    uint constant MAXDEPTH = 5;
 
 /* Structs */
     struct Vote {
@@ -40,20 +45,23 @@ contract Member is DAOAccount
 
 /* State Variable */
 
-    // TODO redundant store. name in registrar
-    bytes32 memberName;
-    DAOAccount public taxAccount;// = new DAOAccount();
+    bytes32 public name;
+    DAOAccount public taxAccount;
     
-    //
-    mapping (bytes32 => mapping (uint => Vote)) currentVotes;
+    // matterName -> optionId -> awarded votes
+    mapping (bytes32 => mapping (uint => Vote)) public currentVotes;
 
     // Delegates are members this member has awarded voting power to
-    // matterId -> delegate -> awarded voting power;
-    mapping (bytes32 => address[]) public delegates;
+    // matterName -> delegate name -> awareded tokens
+    // mapping (bytes32 => address[]) public delegates;
+    mapping (bytes32 => mapping(bytes32 => uint)) public delegates;
+    mapping (bytes32 => uint) public numDelegates;
 
     // Constituents are members who have awarded this member their voting power
-    // matterId -> constituent -> awarded voting power
+    // A member is their own constituent and their votes are recorded here also
+    // matterName -> constituent -> awarded voting power
     mapping (bytes32 => mapping (address => Vote)) public constituents;
+    
     
     
 /* Modifiers */
@@ -129,7 +137,7 @@ contract Member is DAOAccount
         public
         DAOAccount(_dao, _externalOwner)
     {
-        memberName = _name;
+        name = _name;
     }
     
     function ()
@@ -139,22 +147,6 @@ contract Member is DAOAccount
         lastActiveBalance = this.balance;
     }
     
-    function name()
-        public
-        constant
-        returns (string)
-    {
-        uint name = uint(memberName);
-        bytes memory bytesString = new bytes(32);
-        for (uint j=0; j<32; j++) {
-            byte char = byte(bytes32(name * 2 ** (8 * j)));
-            if (char != 0) {
-                bytesString[j] = char;
-            }
-        }
-        return string(bytesString);
-    }
-
     function withdrawableBalance()
         public
         constant
@@ -187,7 +179,8 @@ contract Member is DAOAccount
     {
         uint maxVB = dao.maximumVoteBalance();
         uint minVB = dao.minimumVoteBalance();
-        base_ = this.balance + fundedCredits + taxAccount.balance;
+        base_ = this.balance + fundedCredits + 
+            (address(taxAccount) == 0x0 ? 0 : taxAccount.balance);
         base_ = base_ > maxVB ? maxVB : base_;
         base_ = base_ < minVB ? 0 : base_;
     }
@@ -200,8 +193,22 @@ contract Member is DAOAccount
     {
         uint bv = baseVotes();
         uint maxVB = dao.maximumVoteBalance();
-        votes_ = ((constituents[_matterName][0].votes + bv) * (bv * FIXEDPOINT)/
-            maxVB) / FIXEDPOINT;
+        votes_ = maxVB == 0 ? 0 :
+            // ((constituents[_matterName][0].votes + bv) * (bv * FIXEDPOINT)/
+            // maxVB) / FIXEDPOINT;
+            constituents[_matterName][0].votes + bv;
+    }
+    
+    function getDelegatesFor(bytes32 _matterName)
+        public
+        constant
+        returns (address[])
+    {
+        address[] memory dlgts = new address[](numDelegates[_matterName]);
+        for(uint i=0; i<numDelegates[_matterName]; i++){
+            dlgts[i] = address(delegates[_matterName][bytes32(i+1)]);
+        }
+        return dlgts;
     }
     
     function getConstituentVotesFrom(bytes32 _matterName, Member _constituent)
@@ -215,6 +222,7 @@ contract Member is DAOAccount
             ];
     }
     
+    
     // To register a preference for an option in a matter
     function vote(bytes32 _matterName, uint _optionId, uint _votingTokens)
         external
@@ -222,9 +230,8 @@ contract Member is DAOAccount
         canEnter
         payAttritionTax
         updateVotingBalance
-        validTokens(_matterName, _votingTokens)
+//        validTokens(_matterName, _votingTokens)
         touch
-        returns (bool)
     {
         uint votes; 
         Matter matter = Matter(dao.getMatter(_matterName));
@@ -239,12 +246,15 @@ contract Member is DAOAccount
         constituents[_matterName][this].votingTokens += deltaTokens;
         
         // Votes accounting
-        votes = _votingTokens * totalVotes(_matterName)/MAXTOKENS;
+        votes = (_votingTokens * totalVotes(_matterName)/MAXTOKENS) -
+            currentVotes[_matterName][_optionId].votes;
+        currentVotes[_matterName][_optionId].votes += votes;
         
         matter.vote(_optionId, votes);
-        return SUCCESS;
     }
     
+    
+    // TODO propagate through and limit delegate tree depth
     // Transfer votes to another member for all (matterId ==0) 
     // or a particular matter
     function delegateVotesTo(bytes32 _matterName, bytes32 _delegateName,
@@ -254,9 +264,9 @@ contract Member is DAOAccount
         canEnter  // reentry protection prevents delegate loops
         touch
         validTokens(_matterName, _votingTokens)
-        returns (bool success_)
     {
         Member delegate = Member(dao.getMember(_delegateName));
+        // uint[2] memory oldAward = delegate.constituents(_matterName, this);
         uint[2] memory oldAward = delegate.
             getConstituentVotesFrom(_matterName, this);
         uint transferVotes = 
@@ -266,11 +276,19 @@ contract Member is DAOAccount
         // Take from current voting balance.
         constituents[_matterName][0].votes -= transferVotes;
 
+        // Record delegate
+        // delegates[_matterName].push(delegate);
+        if (delegates[_matterName][bytes32(address(delegate))] == 0) {
+            numDelegates[_matterName] += 1;
+            delegates[_matterName][bytes32(numDelegates[_matterName])] = 
+                uint(delegate);
+            delegates[_matterName][bytes32(address(delegate))] = 
+                uint(numDelegates[_matterName]);
+        }
+        
         // Give to delegate
         delegate.recieveConstituentVotes(_matterName, _votingTokens,
             transferVotes);
-        success_ =  SUCCESS;
-        return;
     }
     
     // Recieve voting power from another member for all or a particular matter
@@ -279,23 +297,19 @@ contract Member is DAOAccount
         public
         onlyVoters
         canEnter
-        returns (bool)
     {
         constituents[_matterName][0].votes += _votes;
         // Record votes and voting tokens of the constituent 
         constituents[_matterName][msg.sender].votingTokens += _votingTokens;
         constituents[_matterName][msg.sender].votes += _votes;
-        return SUCCESS;
     }
     
     function raiseMatter(bytes32 _name, string _url)
         external
         onlyOwner
         canEnter
-        returns (address matter_)
     {
-        matter_ = dao.newMatter(_name, _url);
-        return;
+        dao.newMatter(_name, _url);
     }
     
     function addOption(bytes32 _matterName, bytes32 _optionName, uint _value,
@@ -303,9 +317,8 @@ contract Member is DAOAccount
         external
         onlyOwner
         canEnter
-        returns (uint)
     {
-        return Matter(dao.getMatter(_matterName)).
+        Matter(dao.getMatter(_matterName)).
             addOption(_optionName, _value, _recipient);
     }
     
@@ -315,10 +328,8 @@ contract Member is DAOAccount
         canEnter
         payWithdrawalTax
         hasEther(_amount)
-        returns (bool)
     {
         safeSend(owner, _amount);
-        return SUCCESS;
     }
     
 /* Internal Functions */
@@ -337,14 +348,15 @@ contract Member is DAOAccount
 
 contract MemberFactory
 {
-    string constant public VERSION = "MemberFactory 0.0.3-alpha";
+    string constant public VERSION = "MemberFactory 0.0.4-alpha";
+    Member public last;
+    event Created(bytes32 _name, address _addr);
     
     function createNew(bytes32 _name, address _owner)
         public
-        returns (Member member_)
     {
-        member_ = new Member(msg.sender, _name, _owner);
-        return;
+        last = new Member(msg.sender, _name, _owner);
+        Created(_name, last);
     }
 }
 

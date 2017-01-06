@@ -1,0 +1,10 @@
+<Template name="FundAccount">
+{{#with currentMember}}
+<h3>Send Funds To {{name}}</h3>
+    {{> dapp_addressInput value=address class="dapp-mediaum" disabled="true"}}<br>
+{{/with}}
+	<form id="sendFunds">
+    <input name="sendAmount" class="dapp_input" type="number" placeholder="&Xi;0.000" />
+    <input  class="dapp_input" type="submit" value="Send" />
+    </form>
+</Template>

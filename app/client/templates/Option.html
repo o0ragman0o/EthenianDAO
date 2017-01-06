@@ -1,0 +1,20 @@
+<Template name="Option">
+	<h3>Option - {{name}}</h3>
+		Recipient {{> dapp_identicon identity=recipient class="dapp-small"}}{{recipient}}
+		Value {{value}}
+		Votes {{votes}}
+		Average {{average}}
+	<input id="votingTokens" type="number" maximum="100" minimum="0" placeholder="Vote 0~100%" />
+	<button id="placeVote">Vote</button>
+</Template>
+
+<Template name="OptionForm">
+	<h3>Add Option</h3>
+	<form>
+		<input name="optionName" type="text" placeholder="Option Name"/>
+		<input name="resourceURL" type="text" placeholder="URL"/>
+		{{> dapp_addressInput placeholder="0x000000.." value="0x0000000000000000000000000000000000000000"}}
+		<input name="optionValue" type="number" placeholder="Value"/>
+		<input type="submit" value="Add Option"/>
+	</form>
+</Template>

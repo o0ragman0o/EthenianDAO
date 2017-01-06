@@ -1,0 +1,26 @@
+<template name="Member">
+  <h3>Member Account</h3>
+  {{#if currentMember}}
+	  <h4>{{name}}</h4>
+	  {{#with currentMember}}
+	        {{> dapp_addressInput value=address class="dapp-small" disabled="true"}}<br>
+	        Version: {{VERSION}}<br>
+	        Base Votes: {{baseVotes}}<br>
+	        <!-- Total Votes: {{totalVotes matterName}}<br> -->
+	        Balance: {{contractBalance}}<br>
+	        Funded Credits: {{fundedCredits}}<br>
+	  {{/with}}
+	  <input id="fundAccount" type="button" value="Fund Member Account">
+	{{else}}
+	  <input id="newMember" type="button" value="Join this DAO"/>
+    {{/if}}
+
+</template>
+
+<template name="NewMember">
+  <h3>Name this Member Account</h3>
+  <form>
+  <input type="text" id="memberName" />
+  <input type="submit"/>
+  </form>
+</template>

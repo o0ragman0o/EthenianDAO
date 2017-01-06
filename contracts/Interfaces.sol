@@ -1,8 +1,8 @@
 /******************************************************************************\
 
 file:   Interfaces.sol
-ver:    0.0.3-alpha
-updated:23-Dec-2016
+ver:    0.0.5-sandalstraps
+updated:6-Jan-2017
 author: Darryl Morris (o0ragman0o)
 email:  o0ragman0o AT gmail.com
 

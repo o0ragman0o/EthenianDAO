@@ -1,8 +1,8 @@
 /******************************************************************************\
 
 file:   DAOAccount.sol
-ver:    0.0.3-alpha
-updated:23-Dec-2016
+ver:    0.0.5-sandalstraps
+updated:6-Jan-2017
 author: Darryl Morris (o0ragman0o)
 email:  o0ragman0o AT gmail.com
 
@@ -66,11 +66,8 @@ contract DAOAccount is Base //, DAOAccountInterface
         external
         onlyDAO
         canEnter
-        returns (bool success_)
     {
         permissions = _permissions;
-        success_ = SUCCESS;
-        return;
     }
     
     function fundMatter(bytes32 _matterName, uint _amount)
@@ -78,24 +75,23 @@ contract DAOAccount is Base //, DAOAccountInterface
         onlyOwner
         canEnter
         touch
-        returns (bool success_)
     {
         fundedCredits += _amount;
         MatterInterface matter = MatterInterface(dao.getMatter(_matterName));
         if(!matter.fund(_amount)) throw;
-        success_ = SUCCESS;
-        return;
     }
 }
 
 
 contract DAOAccountFactory
 {
+    event Created(address _addr);
+    DAOAccount public last;
+
     function createNew(address _dao, address _owner)
         public
-        returns (DAOAccount account_)
     {
-        account_ = new DAOAccount(_dao, _owner);
-        return;
+        last = new DAOAccount(_dao, _owner);
+        Created(last);
     }
 }
