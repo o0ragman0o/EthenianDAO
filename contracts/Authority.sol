@@ -20,7 +20,7 @@ pragma solidity ^0.4.0;
 
 contract Authority
 {
-    string constant public VERSION = "Authority 0.0.3-alpha";
+    string constant public VERSION = "Authority v0.0.5-sandalstraps";
 
     // Basic Permissions
     bytes8 constant public IS_MEMBER =                 0x0000000000000001;

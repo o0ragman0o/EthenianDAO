@@ -25,7 +25,7 @@ contract Member is DAOAccount
 
 /* Constants */
 
-    string constant public VERSION = "Member 0.0.4-alpha";
+    string constant public VERSION = "Member v0.0.5-sandalstraps";
     
     // 100 tokens == 100% 
     uint constant MAXTOKENS = 100;
@@ -348,7 +348,7 @@ contract Member is DAOAccount
 
 contract MemberFactory
 {
-    string constant public VERSION = "MemberFactory 0.0.4-alpha";
+    string constant public VERSION = "MemberFactory v0.0.5-sandalstraps";
     Member public last;
     event Created(bytes32 _name, address _addr);
     

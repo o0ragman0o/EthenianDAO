@@ -33,7 +33,6 @@ contract DAOAccountInterface
 
 contract MatterInterface
 {
-    string constant public VERSION = "Matter 0.0.3-alpha";
     bool constant CLOSED = false;
     bool constant OPEN = true;
     

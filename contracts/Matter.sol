@@ -23,7 +23,7 @@ pragma solidity ^0.4.0;
 
 contract Matter is Base
 {
-    string constant public VERSION = "Matter 0.0.4-alpha";
+    string constant public VERSION = "Matter v0.0.5-sandalstraps";
     bool constant CLOSED = false;
     bool constant OPEN = true;
     
@@ -181,7 +181,7 @@ contract Matter is Base
 
 contract MatterFactory
 {
-    string constant public VERSION = "MatterFactory 0.0.4-alpha";
+    string constant public VERSION = "MatterFactory v0.0.5-sandalstraps";
     Matter public last;
     event Created(bytes32 _name, address _addr);
 

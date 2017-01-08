@@ -27,7 +27,7 @@ contract DAOAccount is Base //, DAOAccountInterface
 
 /* Constants */
 
-    string constant public VERSION = "DAOAccount 0.0.3-alpha";
+    string constant public VERSION = "DAOAccount v0.0.5-sandalstraps";
 
     EthenianDAOInterface public dao;
     uint public lastActiveBlock;
@@ -85,6 +85,8 @@ contract DAOAccount is Base //, DAOAccountInterface
 
 contract DAOAccountFactory
 {
+    string constant public VERSION = "DAOAccountFactory v0.0.5-sandalstraps";
+    
     event Created(address _addr);
     DAOAccount public last;
 

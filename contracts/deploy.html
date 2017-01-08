@@ -1,0 +1,32 @@
+<html>
+<head>
+	<title>Deploy EthenianDAO</title>
+
+</head>
+	<lable>Open JSON
+		<input id="json-file" type="file" class="" accept="*.json" onchange='javascript:importJson'/>
+	</lable>			
+	<script>
+	var deployJson;
+	document.getElementById('json-file').addEventListener('change', importJson, false);
+
+	function json(data, ws) {
+		"use strict";
+		var o, objs, maker;	
+		deployJson = JSON.parse(data);
+	}
+
+
+	function importJson(e) {
+		"use strict";
+		var fp = e.target.files[0],
+			reader = new FileReader();
+		if (!fp) { return; }
+		reader.onload = function (e) {
+			var contents = e.target.result;
+			json(contents);
+		};
+		reader.readAsText(fp);
+	}
+	</script>
+</html>

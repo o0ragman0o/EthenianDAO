@@ -28,7 +28,7 @@ pragma solidity ^0.4.0;
 
 contract EthenianDAO is Base
 {
-    string constant public VERSION = "EthenianDAO 0.0.4-alpha";
+    string constant public VERSION = "EthenianDAO v0.0.5-sandalstraps";
     
     bytes32 public name;
 
@@ -237,7 +237,7 @@ contract EthenianDAO is Base
 
 contract EthenianDAOFactory
 {
-    string constant public VERSION = "EthenianDAOFactory 0.0.4-alpha";
+    string constant public VERSION = "EthenianDAOFactory v0.0.5-sandalstraps";
     EthenianDAO public last;
     event Created(bytes32 _name, address _addr);
 

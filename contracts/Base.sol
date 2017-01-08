@@ -1,7 +1,7 @@
 /******************************************************************************\
 
 file:   Base.sol
-ver:    0.0.5-sandalstraps
+ver:    0.2.5
 updated:6-Jan-2017
 author: Darryl Morris (o0ragman0o)
 email:  o0ragman0o AT gmail.com

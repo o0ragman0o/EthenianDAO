@@ -22,7 +22,7 @@ import "Base.sol";
 
 contract AddressRegistrar is Base
 {
-    string constant public VERSION = "AddressRegistrar v0.0.3-alpha";
+    string constant public VERSION = "AddressRegistrar v0.0.5-sandalstraps";
     
     uint public size = 0;
     // name -> address -> id -> name
@@ -77,7 +77,7 @@ contract AddressRegistrar is Base
 
 contract AddressRegistrarFactory
 {
-    string constant public VERSION = "AddressRegistrarFactory v0.0.4-alpha";
+    string constant public VERSION = "AddressRegistrarFactory v0.0.5-sandalstraps";
     AddressRegistrar public last;
 
     event Created(address _addr);
