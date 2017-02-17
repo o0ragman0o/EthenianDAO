@@ -1,8 +1,8 @@
 /******************************************************************************\
 
 file:   Matter.sol
-ver:    0.0.5-sandalstraps
-updated:6-Jan-2017
+ver:    0.0.6
+updated:22-Jan-2017
 author: Darryl Morris (o0ragman0o)
 email:  o0ragman0o AT gmail.com
 
@@ -16,14 +16,16 @@ See MIT Licence for further details.
 
 \******************************************************************************/
 
-import "Base.sol";
+import "Interfaces.sol";
+import "ExtendedBase.sol";
+import "Value.sol";
 
 pragma solidity ^0.4.0;
 
 
-contract Matter is Base
+contract Matter is ExtendedBase //, Value
 {
-    string constant public VERSION = "Matter v0.0.5-sandalstraps";
+    string constant public VERSION = "Matter v0.0.6";
     bool constant CLOSED = false;
     bool constant OPEN = true;
     
@@ -36,14 +38,15 @@ contract Matter is Base
         address recipient;
     }
     
+    // TODO use constants and byte flags for bools
     bool public open;
     bool public recurrent;
     bool public scalar;
+    bool public forTender;
     bool public tendering;
     bool public funding;
     bool public refunding;
     address public dao;
-    bytes32 public name;
     uint public numOptions;
     uint public votesCast;
     uint public openTimeStamp;
@@ -131,14 +134,22 @@ contract Matter is Base
 
 /* External and Public functions */
 
-    function Matter(address _dao, bytes32 _name, string _url)//, bool _scalar)
+    function Matter(address _creator, bytes32 _regName, address _owner)
     {
-        dao = _dao;
-        name = _name;
-        resourceURL = _url;
+        owner = _owner == 0x0 ? _creator : _owner;
+        dao = _creator;
+        regName = _regName;
+    }
+
+    function init(bool _scalar, bool _recurrent, bool _forTender, uint _period)
+    {
         open = OPEN;
         votesCast = 1;
-        // scalar = _scalar;
+        scalar = _scalar;
+        recurrent = _recurrent;
+        forTender = _forTender;
+        period = _period;
+        openTimeStamp = block.timestamp;
     }
     
     function touch() {
@@ -179,17 +190,18 @@ contract Matter is Base
 }
 
 
-contract MatterFactory
+contract MatterFactory is FactoryInterface
 {
-    string constant public VERSION = "MatterFactory v0.0.5-sandalstraps";
+    string constant public VERSION = "MatterFactory v0.0.6";
+    bytes32 constant public regName = "Matters";
     Matter public last;
-    event Created(bytes32 _name, address _addr);
 
-    function createNew(bytes32 _name, string _url)//, bool _scalar)
+    function createNew(bytes32 _regName, address _owner)
         public
     {
-        last = new Matter(msg.sender, _name, _url);//, _scalar);
-        Created(_name, last);
+        last = new Matter(msg.sender, _regName, _owner);
+        Created(msg.sender, _regName, last);
+
     }
 }
 

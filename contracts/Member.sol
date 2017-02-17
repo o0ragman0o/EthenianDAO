@@ -1,8 +1,8 @@
 /******************************************************************************\
 
 file:   Member.sol
-ver:    0.0.5-sandalstraps
-updated:6-Jan-2017
+ver:    0.0.6
+updated:30-Jan-2017
 author: Darryl Morris (o0ragman0o)
 email:  o0ragman0o AT gmail.com
 
@@ -18,14 +18,15 @@ See MIT Licence for further details.
 
 pragma solidity ^0.4.0;
 
-import "DAOAccount.sol";
+import "ExtendedBase.sol";
+import "Interfaces.sol";
 
-contract Member is DAOAccount
+contract Member is ExtendedBase
 {
 
 /* Constants */
 
-    string constant public VERSION = "Member v0.0.5-sandalstraps";
+    string constant public VERSION = "Member v0.0.6";
     
     // 100 tokens == 100% 
     uint constant MAXTOKENS = 100;
@@ -46,7 +47,14 @@ contract Member is DAOAccount
 /* State Variable */
 
     bytes32 public name;
-    DAOAccount public taxAccount;
+    // TODO reinstate tax acounts
+    // DAOAccount public taxAccount;
+    
+    EthenianDAOInterface public dao;
+    uint public fundedCredits;
+    uint public lastActiveBalance;
+    uint public lastActiveBlock;
+    address public taxAccount;
     
     // matterName -> optionId -> awarded votes
     mapping (bytes32 => mapping (uint => Vote)) public currentVotes;
@@ -66,6 +74,11 @@ contract Member is DAOAccount
     
 /* Modifiers */
     
+    modifier touch
+    {
+        // TODO preprocess activity state
+        _;
+    }
     modifier onlyVoters()
     {
         // TODO validate caller through MembersRegistrar
@@ -129,17 +142,18 @@ contract Member is DAOAccount
     
     modifier updateVotingBalance()
     {
-      _; 
+        // TODO
+        _; 
     }
     // Handles activity updates to tax
     
-    function Member(address _dao, bytes32 _name, address _externalOwner)
-        public
-        DAOAccount(_dao, _externalOwner)
+    function Member(address _creator, bytes32 _regName, address _owner)
     {
-        name = _name;
+        owner = _owner == 0x0 ? _creator : _owner;
+        dao = EthenianDAOInterface(_creator);
+        regName = _regName;
     }
-    
+
     function ()
         payable
         touch
@@ -160,6 +174,7 @@ contract Member is DAOAccount
         constant
         returns (uint wdlTax_)
     {
+        // TODO rate against balance
         wdlTax_ = dao.withdrawalTaxRate() * dao.attritionTaxRate();
     }
     
@@ -234,7 +249,7 @@ contract Member is DAOAccount
         touch
     {
         uint votes; 
-        Matter matter = Matter(dao.getMatter(_matterName));
+        MatterInterface matter = MatterInterface(dao.getMatter(_matterName));
 
         // Token accouting
         uint deltaTokens = _votingTokens -
@@ -309,7 +324,7 @@ contract Member is DAOAccount
         onlyOwner
         canEnter
     {
-        dao.newMatter(_name, _url);
+        SandalStrapsInterface(dao).newFromFactory("Matters", _name);
     }
     
     function addOption(bytes32 _matterName, bytes32 _optionName, uint _value,
@@ -318,7 +333,7 @@ contract Member is DAOAccount
         onlyOwner
         canEnter
     {
-        Matter(dao.getMatter(_matterName)).
+        MatterInterface(dao.getMatter(_matterName)).
             addOption(_optionName, _value, _recipient);
     }
     
@@ -349,6 +364,7 @@ contract Member is DAOAccount
 contract MemberFactory
 {
     string constant public VERSION = "MemberFactory v0.0.5-sandalstraps";
+    bytes32 constant public regName = "Members";
     Member public last;
     event Created(bytes32 _name, address _addr);
     

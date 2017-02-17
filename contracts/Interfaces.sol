@@ -1,12 +1,12 @@
 /******************************************************************************\
 
 file:   Interfaces.sol
-ver:    0.0.5-sandalstraps
-updated:6-Jan-2017
+ver:    0.0.6
+updated:15-Jan-2017
 author: Darryl Morris (o0ragman0o)
 email:  o0ragman0o AT gmail.com
 
-
+This file is part of the SandalStraps framework
 
 This software is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -16,23 +16,83 @@ See MIT Licence for further details.
 
 \******************************************************************************/
 
-pragma solidity ^0.4.0;
+pragma solidity ^0.4.7;
 
-
-contract DAOAccountInterface
+contract StrapsBase
 {
-    EthenianDAOInterface public dao;
-    uint public lastActiveBlock;
-    uint public lastActiveBalance;
-    uint public fundedCredits;
-    bytes8 public permissions;
-    function changePermissions(bytes8 _permissions) external returns (bool);
-    function fundMatter(uint _matterId, uint _amount) external returns (bool);
+    // An immutable identifier to be set in constructor and used by registrars
+    bytes32 public regName;
+    address public owner;
+    event ChangedOwner(address indexed oldOwner, address indexed newOwner);
+
+    modifier onlyOwner() {
+        if (msg.sender != owner) throw;
+        _;
+    }
+
+    function changeOwner(address _owner)
+        public
+    {
+        if (msg.sender == owner) {
+            owner = _owner;
+        }
+    }
+}
+
+contract ValueInterface
+{
+    function value() public constant returns (uint);
+}
+
+contract FactoryInterface
+{
+    address public last;
+    
+    event Created(address _creator, bytes32 _name, address _addr);
+    function createNew(bytes32 _name, address _owner);
 }
 
 
+contract SandalStrapsInterface
+{
+    function getAddressByName(bytes32 _registrar, bytes32 _name)
+        public constant returns (address addr_);
+
+    function getNameByIdx(bytes32 _registrar, uint _idx)
+        public constant returns (bytes32 name_);
+
+    function getNameByAddress(bytes32 _registrar, address _addr)
+        public constant returns (bytes32 name_);
+
+    function getIdxByAddress(bytes32 _registrar, address _addr)
+        public constant returns (uint idx_);
+
+/* Public non-constant Functions */ 
+
+    function addFactory(address _address);
+    function setRegistrarEntry(bytes32 _registrar, address _addr);
+    function newFromFactory(bytes32 _factory, bytes32 _name) payable;
+}
+
+contract EthenianDAOInterface
+{
+
+/* EthenianDAO Standard public functions */
+    // Returns the attritian tax rate per block
+    function attritionTaxRate() constant returns (uint aTR_);
+    function withdrawalTaxRate() constant returns (uint wTR_);
+    function minimumVoteBalance() constant returns (uint minVB_);
+    function maximumVoteBalance() constant returns (uint maxVB_);
+    function getMatter(bytes32 _name) constant returns (address matter_);
+    function getMember (bytes32 _name) constant returns (address member_);
+    function getMemberFromOwner (address ownerAddr_)
+        constant returns (address member_);
+    function authority() constant returns (address auth_);
+}
+
 contract MatterInterface
 {
+    string constant public VERSION = "Matter v0.0.6";
     bool constant CLOSED = false;
     bool constant OPEN = true;
     
@@ -45,54 +105,32 @@ contract MatterInterface
         address recipient;
     }
     
+    // TODO use constants and byte flags for bools
     bool public open;
     bool public recurrent;
-//    bool public tendering;
-//    bool public funding;
-//    bool public refunding;
-    uint public matterId;
+    bool public scalar;
+    bool public forTender;
+    bool public tendering;
+    bool public funding;
+    bool public refunding;
+    address public dao;
     uint public numOptions;
     uint public votesCast;
     uint public openTimeStamp;
     uint public period;
     uint public periods;
-    bytes32 public name;
     mapping (uint => Option) public options;
     // voter -> optionId -> votes
     mapping (address => mapping (uint => uint)) public voters;
 
-    function value() public constant returns (uint);
-    function average() public constant returns (uint);
-    function leader() public constant returns (uint);
-    function vote(uint _optionId, uint _votes) external returns (bool);
-    function addOption(bytes32 _name, uint _value, address _recipient) 
-        external returns (uint);
-    function fund(uint _amount) payable returns (bool);
-}
+    function value() constant returns (uint value_);
+    function average() constant returns (uint average_);
+    function leader() constant returns (uint leader_);
 
-contract AuthorityInterface
-{
-    EthenianDAOInterface dao;
-    mapping (address => bytes4) permissions;
-    function validate(address _subject, bytes4 _accessReq) 
-        public constant returns (bytes4);
-    function change(address _subject, bytes4 _access)
-        public returns (bytes4);
-}
+/* External and Public functions */
 
-contract EthenianDAOInterface
-{
-    function attritionTaxRate() public constant returns (uint aTR_);
-    function withdrawalTaxRate() public constant returns (uint wTR_);
-    function minimumVoteBalance() public constant returns (uint minVB_);
-    function maximumVoteBalance() public constant returns (uint maxVB_);
-    function authority() public constant returns (address auth_);
-    function getMember(bytes32 _name) public constant returns (address member_);
-    function getMatter(bytes32 _name) public constant returns (address matter_);
-    function setContract(bytes32 _name, address _addr) public returns (bool);
-    function newMember(bytes32 _name, string _url) public returns (address member_);
-    function newMatter(bytes32 _name, string _url) public returns (address matter_);
-    function getByName(bytes32 _name) public constant returns (address addr_);
-    function getById(uint _id) public constant returns (address addr_);
+    function touch();
+    function vote(uint _optionId, uint _votes)external;
+    function addOption(bytes32 _name, uint _value, address _recipient) external;
+    function fund(uint _amount) payable;
 }
-
