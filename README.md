@@ -1,10 +1,10 @@
-#The EthenianDAO - POC 1 "SandleStraps"
+# The EthenianDAO - POC 1 "SandleStraps"
 
-The Ethenian Decentralized Autonamous Organisation is a framework of smart contracts written for the Etherium platform.  It's primary focus is to offer direct and delegative democratic governance models for a broad range of organisational types.  This framework utilises a system of registrars and smart contract factories to offer extensibility and upgradeability while offering secure management of stakeholder funds.
+The Ethenian Decentralized Autonamous Organisation is a framework of smart contracts written for the Ethereum platform.  It's primary focus is to offer direct and delegative democratic governance models for a broad range of organisational types.  This framework utilises a system of registrars and smart contract factories to offer extensibility and upgradeability while offering secure management of stakeholder funds.
 
 In the EthenianDAO, Member's raise, vote, and fund Matters.  Each member owns and funds their own member contract and maintains full control over those funds until they are committed to funding a Matter.  A member's voting power is proportional to their level of financial commitment up to an optional maximum voting balance.
 
-##Release Notes
+## Release Notes
 This code base is an early Proof of Concept, it is neither complete nor algorithmically secure but has been released here as an entry into the [Blockchain Virtual UAE GovHack](http://blockchainvirtualgovhack.com/) hackathon.
 
 
@@ -23,7 +23,7 @@ This repository is in no way ready for deploying to a blockchain and user friend
 * Click `Add Factory` and enter `memberFactory` as the name and paste the `MemberFactory` address.
 * Repeat for `Matter Factory`
 * You should now be able to `Join this DAO` and then `Raise a Matter`. 
-* NOTE: Only one member account is allowed per Etherium account.
+* NOTE: Only one member account is allowed per Ethereum account.
 * Click `Fund Member Account` to send funds.  Voting power is proportional to funds provided.
 * Once a matter is created, options and delegates can be added.
 * A member can adjust the sliders on the options and delegates of a matter to express preferences between 0 to 100% of their voting power and then click `Submit Votes`
